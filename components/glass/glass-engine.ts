@@ -30,6 +30,7 @@ const NOTIFY_MS = 100
 
 class GlassEngine {
   private mounts = new Set<GlassMount>()
+  private listeners = new Set<() => void>()
   private tween: gsap.core.Tween | null = null
   private lastNotify = 0
   private pending: string | null = null
@@ -71,6 +72,18 @@ class GlassEngine {
     for (const mount of this.mounts) mount.invalidate()
   }
 
+  /** Subscribe to word changes (React). Stable across renders. */
+  subscribeVersion = (listener: () => void) => {
+    this.listeners.add(listener)
+    return () => {
+      this.listeners.delete(listener)
+    }
+  }
+
+  private emit() {
+    for (const listener of this.listeners) listener()
+  }
+
   /** Push glyph and triangle counts into the shared state for the readout. */
   private notify(force = false) {
     const now = performance.now()
@@ -95,6 +108,7 @@ class GlassEngine {
     this.outgoing = instant ? null : this.current
     this.current = word
     this.version++
+    this.emit()
 
     if (instant) {
       this.assemble = 1
@@ -118,6 +132,7 @@ class GlassEngine {
       onComplete: () => {
         this.outgoing = null
         this.version++
+        this.emit()
         this.notify(true)
         this.invalidateAll()
       },

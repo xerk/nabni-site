@@ -200,6 +200,7 @@ export function GlassScene({
   onFirstFrame,
 }: GlassSceneProps) {
   const invalidate = useThree((s) => s.invalidate)
+  const frameloop = useThree((s) => s.frameloop)
   const palette = React.useMemo(() => readPalette(), [])
   const material = useGlassMaterial(reduced)
   const backdrop = useBackdrop()
@@ -220,15 +221,36 @@ export function GlassScene({
   const dissolve = React.useRef(1)
   const first = React.useRef(false)
 
-  // Re-render when the engine swaps words.
+  // Re-render when the engine swaps words. The subscribe callback must be
+  // stable, or React re-subscribes on every render and the mount set churns.
   const version = React.useSyncExternalStore(
-    (onChange) => {
-      const mount = { invalidate: onChange }
-      return glassEngine.addMount(mount)
-    },
+    glassEngine.subscribeVersion,
     () => glassEngine.version,
     () => 0
   )
+
+  // Register this canvas so the engine can ask it for a frame.
+  React.useEffect(() => glassEngine.addMount({ invalidate }), [invalidate])
+
+  // The stage parks the frameloop at "never" while the word is out of its
+  // zone (scrolling past capabilities into work). Resuming the loop does not
+  // itself draw, and an `invalidate()` issued before R3F has restarted the
+  // loop is dropped — which left the last, empty frame on screen until a
+  // reload. Ask for a frame now and on the next two animation frames, by
+  // which point the loop is definitely running again.
+  React.useEffect(() => {
+    if (frameloop === "never") return
+    invalidate()
+    let second = 0
+    const first = requestAnimationFrame(() => {
+      invalidate()
+      second = requestAnimationFrame(() => invalidate())
+    })
+    return () => {
+      cancelAnimationFrame(first)
+      cancelAnimationFrame(second)
+    }
+  }, [frameloop, invalidate])
   const current = glassEngine.current
   const outgoing = glassEngine.outgoing
 
@@ -292,6 +314,13 @@ export function GlassScene({
         : 1
       group.scale.setScalar(scale * fit)
     }
+
+    // The stage wrapper starts at opacity 0 and is driven from shared state:
+    // the capabilities exit fades it out, the zone director restores it. The
+    // frame step owns the write, so a state change can never be left
+    // unpainted (dropping this left the word invisible after scrolling past
+    // the capabilities section and back).
+    c.applyOpacity(steleState.opacity)
 
     // The contact section is a Sand ground: pale glass on pale paper is
     // invisible, and the additive halo washes it out. There the word becomes

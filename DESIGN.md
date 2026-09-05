@@ -109,6 +109,12 @@ light targets and the readout all keep working. The readout line becomes
 button reads **Cast it**; the sr-only sentence becomes "A glass sculpture of
 the word 'we build' in Arabic; it re-casts to whatever you type above."
 
+**Ground pattern.** Square Kufic is grid calligraphy, so the page carries the
+same lattice the word is written in: a 56px (40px on mobile) hairline grid at
+5% sand on Night and 4% night on Sand, drawn on each section's `::before`,
+masked to fade out below the fold so it never competes with type. Pure CSS, no
+paint cost worth measuring.
+
 **Budget.** Transmission pass at 512 px, ≤ 60k triangles per word, canvas dpr
 ≤ 1.5, demand frameloop when idle (the drift keeps a low-rate loop only while
 in view). Reduced motion: static word, no drift, instant casts.

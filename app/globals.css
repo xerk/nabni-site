@@ -94,6 +94,8 @@
   --ring: var(--color-amber);
   --radius: 0px;
   --line: var(--color-ash);
+  --pattern-line: color-mix(in srgb, var(--color-sand) 5%, transparent);
+  --pattern-step: 56px;
   color-scheme: dark;
 }
 
@@ -117,6 +119,8 @@
   --input: var(--color-ember);
   --ring: var(--color-ember);
   --line: var(--color-dust);
+  --pattern-line: color-mix(in srgb, var(--color-night) 4%, transparent);
+  --pattern-step: 56px;
   color-scheme: light;
 }
 
@@ -141,6 +145,9 @@
   :root {
     --section-pad: 12vh;
     --measure: 100%;
+  }
+  [data-ground] {
+    --pattern-step: 40px;
   }
 }
 
@@ -361,6 +368,45 @@
 [data-ground="sand"] .weave-cell[data-on="true"] {
   background: var(--color-ember);
   border-color: var(--color-ember);
+}
+
+/* ------------------------------------------------------------------------
+   GROUND PATTERN — the lattice the whole design is built on.
+
+   Square Kufic is grid calligraphy: a cell is the unit the glass word is
+   written in, so the page carries the same grid, faintly. It sits below the
+   ground wipe and above the section's own colour, and fades out toward the
+   bottom of each section so it never competes with type.
+   ------------------------------------------------------------------------ */
+@layer base {
+  [data-ground]::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -20;
+    pointer-events: none;
+    background-image:
+      repeating-linear-gradient(
+        to right,
+        var(--pattern-line) 0 1px,
+        transparent 1px var(--pattern-step)
+      ),
+      repeating-linear-gradient(
+        to bottom,
+        var(--pattern-line) 0 1px,
+        transparent 1px var(--pattern-step)
+      );
+    -webkit-mask-image: radial-gradient(
+      120% 90% at 70% 12%,
+      #000 0%,
+      transparent 72%
+    );
+    mask-image: radial-gradient(
+      120% 90% at 70% 12%,
+      #000 0%,
+      transparent 72%
+    );
+  }
 }
 
 /* Stele anchors: empty boxes the WebGL slab is placed onto. They take pointer
