@@ -144,7 +144,10 @@ export function SteleReadout({ className }: { className?: string }) {
     <p
       className={cn(
         // 13px / wdth 90; 11px / wdth 75 below 768px (§3.2 mono).
-        "type-mono whitespace-nowrap text-muted-foreground max-md:text-[0.6875rem] max-md:[--wdth:75]",
+        // It only stays on one line from lg up. Below that a long brief makes
+        // the line wider than the screen, and an over-wide child grows the
+        // layout viewport itself, pushing the nav off the right edge.
+        "type-mono max-w-full text-muted-foreground [overflow-wrap:anywhere] max-md:text-[0.6875rem] max-md:[--wdth:75] lg:whitespace-nowrap",
         className
       )}
       dir="ltr"
