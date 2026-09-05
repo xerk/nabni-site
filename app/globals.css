@@ -1,129 +1,458 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
+@import "lenis/dist/lenis.css";
 
-@custom-variant dark (&:is(.dark *));
+/* ------------------------------------------------------------------------
+   DESIGN TOKENS — v2 "night edition". See DESIGN.md §V2 and §2.
+   CSS is the only place a hex is written.
+   ------------------------------------------------------------------------ */
+@theme {
+  /* six named colours, two 3D materials, derived values */
+  --color-night: #0f0d0b; /* main ground: warm obsidian, a desert night */
+  --color-sand: #efe7d9; /* foreground on Night; ground of the two inverted sections */
+  --color-dune: #a89d8b; /* secondary text on Night; UI edges on Night */
+  --color-amber: #f0a43a; /* the sun: key light, cursor, focus ring on Night, primary CTA hover */
+  --color-ember: #8f4e0e; /* amber pulled down for Sand grounds: links, focus, filled cells (5.3:1) */
+  --color-ash: #4a4238; /* lines on Night, never text */
+  --color-dust: #b9ae9b; /* lines on Sand, never text */
+  --color-basalt: #26211c; /* 3D slab material and SVG fallback ground */
+  --color-pitch: #070605; /* 3D hemisphere ground + SVG side faces */
+  --color-night-muted: #5c5346; /* secondary text on Sand, 5.9:1 */
+  --color-row-tint: #e3d9c6; /* portfolio row hover ground on Sand */
+  --color-halo: color-mix(in srgb, #f0a43a 16%, transparent); /* cursor halo over the stone */
 
+  /* type families (next/font variables are set on <html> in app/layout.tsx) */
+  --font-display: var(--font-anybody), "Arial Narrow", Impact, sans-serif;
+  --font-display-ar: var(--font-reem-kufi), "Noto Kufi Arabic", "Segoe UI", sans-serif;
+  --font-sans: var(--font-plex-arabic), "Segoe UI", Tahoma, Arial, sans-serif;
+  --font-mono: var(--font-martian), ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --font-heading: var(--font-display);
+
+  /* radii: the page is stone; nothing is rounded except the cell unit and rings */
+  --radius-cell: 2px;
+  --radius-ring: 2px;
+
+  /* easing (mirrors CustomEase names in lib/motion/gsap.ts) */
+  --ease-studio: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-studio-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --ease-carve: cubic-bezier(0.7, 0, 0.3, 1);
+  --ease-lift: cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+/* shadcn semantic tokens → CSS variables (remapped per ground below) */
 @theme inline {
-    --font-heading: var(--font-sans);
-    --font-sans: var(--font-sans);
-    --color-sidebar-ring: var(--sidebar-ring);
-    --color-sidebar-border: var(--sidebar-border);
-    --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-    --color-sidebar-accent: var(--sidebar-accent);
-    --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-    --color-sidebar-primary: var(--sidebar-primary);
-    --color-sidebar-foreground: var(--sidebar-foreground);
-    --color-sidebar: var(--sidebar);
-    --color-chart-5: var(--chart-5);
-    --color-chart-4: var(--chart-4);
-    --color-chart-3: var(--chart-3);
-    --color-chart-2: var(--chart-2);
-    --color-chart-1: var(--chart-1);
-    --color-ring: var(--ring);
-    --color-input: var(--input);
-    --color-border: var(--border);
-    --color-destructive: var(--destructive);
-    --color-accent-foreground: var(--accent-foreground);
-    --color-accent: var(--accent);
-    --color-muted-foreground: var(--muted-foreground);
-    --color-muted: var(--muted);
-    --color-secondary-foreground: var(--secondary-foreground);
-    --color-secondary: var(--secondary);
-    --color-primary-foreground: var(--primary-foreground);
-    --color-primary: var(--primary);
-    --color-popover-foreground: var(--popover-foreground);
-    --color-popover: var(--popover);
-    --color-card-foreground: var(--card-foreground);
-    --color-card: var(--card);
-    --color-foreground: var(--foreground);
-    --color-background: var(--background);
-    --radius-sm: calc(var(--radius) * 0.6);
-    --radius-md: calc(var(--radius) * 0.8);
-    --radius-lg: var(--radius);
-    --radius-xl: calc(var(--radius) * 1.4);
-    --radius-2xl: calc(var(--radius) * 1.8);
-    --radius-3xl: calc(var(--radius) * 2.2);
-    --radius-4xl: calc(var(--radius) * 2.6);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+/* ------------------------------------------------------------------------
+   GROUNDS — every section root carries data-ground="night" | "sand".
+   ------------------------------------------------------------------------ */
+:root,
+[data-ground="night"] {
+  --background: var(--color-night);
+  --foreground: var(--color-sand);
+  --card: var(--color-night);
+  --card-foreground: var(--color-sand);
+  --popover: var(--color-night);
+  --popover-foreground: var(--color-sand);
+  --primary: var(--color-sand);
+  --primary-foreground: var(--color-night);
+  --secondary: transparent;
+  --secondary-foreground: var(--color-sand);
+  --muted: var(--color-night);
+  --muted-foreground: var(--color-dune);
+  --accent: var(--color-amber);
+  --accent-foreground: var(--color-night);
+  --destructive: var(--color-sand); /* errors are sentences, not red */
+  --border: var(--color-dune);
+  --input: var(--color-dune);
+  --ring: var(--color-amber);
+  --radius: 0px;
+  --line: var(--color-ash);
+  color-scheme: dark;
+}
+
+[data-ground="sand"] {
+  --background: var(--color-sand);
+  --foreground: var(--color-night);
+  --card: var(--color-sand);
+  --card-foreground: var(--color-night);
+  --popover: var(--color-sand);
+  --popover-foreground: var(--color-night);
+  --primary: var(--color-night);
+  --primary-foreground: var(--color-sand);
+  --secondary: transparent;
+  --secondary-foreground: var(--color-night);
+  --muted: var(--color-sand);
+  --muted-foreground: var(--color-night-muted);
+  --accent: var(--color-ember);
+  --accent-foreground: var(--color-sand);
+  --destructive: var(--color-night);
+  --border: var(--color-dust);
+  --input: var(--color-ember);
+  --ring: var(--color-ember);
+  --line: var(--color-dust);
+  color-scheme: light;
 }
 
 :root {
-    --background: oklch(1 0 0);
-    --foreground: oklch(0.145 0 0);
-    --card: oklch(1 0 0);
-    --card-foreground: oklch(0.145 0 0);
-    --popover: oklch(1 0 0);
-    --popover-foreground: oklch(0.145 0 0);
-    --primary: oklch(0.205 0 0);
-    --primary-foreground: oklch(0.985 0 0);
-    --secondary: oklch(0.97 0 0);
-    --secondary-foreground: oklch(0.205 0 0);
-    --muted: oklch(0.97 0 0);
-    --muted-foreground: oklch(0.556 0 0);
-    --accent: oklch(0.97 0 0);
-    --accent-foreground: oklch(0.205 0 0);
-    --destructive: oklch(0.577 0.245 27.325);
-    --border: oklch(0.922 0 0);
-    --input: oklch(0.922 0 0);
-    --ring: oklch(0.708 0 0);
-    --chart-1: oklch(0.87 0 0);
-    --chart-2: oklch(0.556 0 0);
-    --chart-3: oklch(0.439 0 0);
-    --chart-4: oklch(0.371 0 0);
-    --chart-5: oklch(0.269 0 0);
-    --radius: 0.625rem;
-    --sidebar: oklch(0.985 0 0);
-    --sidebar-foreground: oklch(0.145 0 0);
-    --sidebar-primary: oklch(0.205 0 0);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.97 0 0);
-    --sidebar-accent-foreground: oklch(0.205 0 0);
-    --sidebar-border: oklch(0.922 0 0);
-    --sidebar-ring: oklch(0.708 0 0);
+  --gutter: clamp(1.25rem, 4vw, 4rem);
+  --section-pad: 18vh;
+  --measure: 38rem;
+  --nav-h: 56px;
+  /* --wdth is intentionally NOT set here: each type-* utility carries its own
+     resting width via var(--wdth, N); elements set --wdth only to animate. */
+
+  /* durations (DESIGN.md §2.1) */
+  --dur-micro: 160ms;
+  --dur-fast: 200ms;
+  --dur-base: 320ms;
+  --dur-reveal: 600ms;
+  --dur-carve: 1100ms;
+  --dur-lens: 600ms;
 }
 
-.dark {
-    --background: oklch(0.145 0 0);
-    --foreground: oklch(0.985 0 0);
-    --card: oklch(0.205 0 0);
-    --card-foreground: oklch(0.985 0 0);
-    --popover: oklch(0.205 0 0);
-    --popover-foreground: oklch(0.985 0 0);
-    --primary: oklch(0.922 0 0);
-    --primary-foreground: oklch(0.205 0 0);
-    --secondary: oklch(0.269 0 0);
-    --secondary-foreground: oklch(0.985 0 0);
-    --muted: oklch(0.269 0 0);
-    --muted-foreground: oklch(0.708 0 0);
-    --accent: oklch(0.269 0 0);
-    --accent-foreground: oklch(0.985 0 0);
-    --destructive: oklch(0.704 0.191 22.216);
-    --border: oklch(1 0 0 / 10%);
-    --input: oklch(1 0 0 / 15%);
-    --ring: oklch(0.556 0 0);
-    --chart-1: oklch(0.87 0 0);
-    --chart-2: oklch(0.556 0 0);
-    --chart-3: oklch(0.439 0 0);
-    --chart-4: oklch(0.371 0 0);
-    --chart-5: oklch(0.269 0 0);
-    --sidebar: oklch(0.205 0 0);
-    --sidebar-foreground: oklch(0.985 0 0);
-    --sidebar-primary: oklch(0.488 0.243 264.376);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.269 0 0);
-    --sidebar-accent-foreground: oklch(0.985 0 0);
-    --sidebar-border: oklch(1 0 0 / 10%);
-    --sidebar-ring: oklch(0.556 0 0);
+@media (max-width: 767px) {
+  :root {
+    --section-pad: 12vh;
+    --measure: 100%;
+  }
 }
 
+/* ------------------------------------------------------------------------
+   BASE
+   ------------------------------------------------------------------------ */
 @layer base {
   * {
-    @apply border-border outline-ring/50;
-    }
+    @apply border-border;
+  }
+
+  html {
+    background: var(--color-night); /* overscroll is never white */
+    font-family: var(--font-sans);
+    -webkit-text-size-adjust: 100%;
+  }
+
   body {
     @apply bg-background text-foreground;
+    font-size: 1.0625rem;
+    line-height: 1.55;
+    min-height: 100svh;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overflow-x: clip;
+  }
+
+  @media (max-width: 767px) {
+    body {
+      font-size: 1rem;
     }
-  html {
-    @apply font-sans;
-    }
+  }
+
+  ::selection {
+    background: var(--color-amber);
+    color: var(--color-night);
+  }
+  [data-ground="sand"] ::selection {
+    background: var(--color-night);
+    color: var(--color-sand);
+  }
+
+  /* Keyboard focus is independent of the cursor and always visible. */
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 3px;
+    border-radius: var(--radius-ring);
+  }
+
+  a {
+    text-underline-offset: 0.18em;
+  }
+
+  /* Arabic accents: display face, never scaled horizontally. */
+  .ar,
+  [lang="ar"] {
+    font-family: var(--font-display-ar);
+    font-variation-settings: normal;
+  }
+
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+}
+
+/* ------------------------------------------------------------------------
+   TYPE ROLES — DESIGN.md §3.2. Width is set on --wdth, never with scaleX.
+   ------------------------------------------------------------------------ */
+@utility wdth-axis {
+  font-variation-settings: "wdth" var(--wdth, 100);
+}
+
+@utility type-display-xl {
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: clamp(2.75rem, 11vw, 10.5rem);
+  line-height: 0.9;
+  letter-spacing: -0.02em;
+  font-variation-settings: "wdth" var(--wdth, 118);
+}
+
+@utility type-display {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: clamp(2rem, 6.5vw, 5.5rem);
+  line-height: 0.95;
+  letter-spacing: -0.015em;
+  font-variation-settings: "wdth" var(--wdth, 100);
+}
+
+@utility type-h2 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: clamp(1.25rem, 2.2vw, 2rem);
+  line-height: 1.05;
+  letter-spacing: -0.01em;
+  font-variation-settings: "wdth" var(--wdth, 100);
+}
+
+@utility type-h3 {
+  font-family: var(--font-sans);
+  font-weight: 600;
+  font-size: 1.125rem;
+  line-height: 1.4;
+}
+
+@utility type-body {
+  font-family: var(--font-sans);
+  font-weight: 400;
+  font-size: 1.0625rem;
+  line-height: 1.55;
+  @media (max-width: 767px) {
+    font-size: 1rem;
+  }
+}
+
+@utility type-small {
+  font-family: var(--font-sans);
+  font-weight: 500;
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  letter-spacing: 0.01em;
+}
+
+@utility type-mono {
+  font-family: var(--font-mono);
+  font-weight: 400;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  letter-spacing: 0.02em;
+  font-variation-settings: "wdth" var(--wdth, 90);
+}
+
+@utility type-eyebrow {
+  font-family: var(--font-mono);
+  font-weight: 500;
+  font-size: 0.75rem;
+  line-height: 1.4;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-variation-settings: "wdth" var(--wdth, 90);
+}
+
+@utility type-button {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1rem;
+  line-height: 1;
+  font-variation-settings: "wdth" var(--wdth, 100);
+}
+
+/* ------------------------------------------------------------------------
+   LAYOUT HELPERS
+   ------------------------------------------------------------------------ */
+@utility section-pad {
+  padding-block: var(--section-pad);
+}
+
+@utility gutter {
+  padding-inline: var(--gutter);
+}
+
+@utility grid-12 {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  column-gap: clamp(1rem, 2vw, 2rem);
+}
+
+@utility measure {
+  max-width: var(--measure);
+}
+
+/* Skip link: first focusable element on the page. */
+.skip-link {
+  position: absolute;
+  inset-inline-start: var(--gutter);
+  top: -100%;
+  z-index: 100;
+  padding: 0.75rem 1rem;
+  background: var(--color-sand);
+  color: var(--color-night);
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+}
+.skip-link:focus-visible {
+  top: 0.75rem;
+}
+
+/* Weave-mark: five cells in fixed order WEB MOBILE DESKTOP API AI. */
+.weave {
+  display: inline-flex;
+  gap: 3px;
+  vertical-align: middle;
+}
+.weave-cell {
+  inline-size: 10px;
+  block-size: 10px;
+  border-radius: var(--radius-cell);
+  border: 1px solid var(--color-dune);
+  transition:
+    background-color var(--dur-fast, 200ms) var(--ease-studio),
+    border-color var(--dur-fast, 200ms) var(--ease-studio);
+}
+.weave-cell[data-on="true"] {
+  background: var(--color-sand);
+  border-color: var(--color-sand);
+}
+[data-ground="sand"] .weave-cell {
+  border-color: var(--color-dust);
+}
+[data-ground="sand"] .weave-cell[data-on="true"] {
+  background: var(--color-ember);
+  border-color: var(--color-ember);
+}
+
+/* Stele anchors: empty boxes the WebGL slab is placed onto. They take pointer
+   events only so the sun cursor can enter its "stone" state over the rect. */
+.stele-anchor {
+  user-select: none;
+}
+
+/* ------------------------------------------------------------------------
+   CURSOR — the sun. DESIGN.md §6.3. Mechanics in components/cursor/cursor.tsx
+   ------------------------------------------------------------------------ */
+.has-cursor,
+.has-cursor *:not(input):not(textarea):not(select) {
+  cursor: none;
+}
+
+.cursor {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 9999;
+  pointer-events: none;
+  inline-size: 12px;
+  block-size: 12px;
+  margin: -6px 0 0 -6px;
+  border-radius: 9999px;
+  background: var(--color-amber);
+  box-shadow: 0 0 0 1px var(--color-night);
+  opacity: 0;
+  will-change: transform;
+  transition:
+    opacity 200ms var(--ease-studio),
+    inline-size 200ms var(--ease-studio),
+    block-size 200ms var(--ease-studio),
+    margin 200ms var(--ease-studio),
+    background-color 200ms var(--ease-studio),
+    border-radius 200ms var(--ease-studio),
+    box-shadow 200ms var(--ease-studio),
+    scale 160ms var(--ease-studio);
+}
+.cursor::before {
+  content: "";
+  position: absolute;
+  inset: 50%;
+  inline-size: 160px;
+  block-size: 160px;
+  translate: -50% -50%;
+  border-radius: 9999px;
+  background: radial-gradient(circle, var(--color-halo) 0%, transparent 70%);
+  opacity: 0;
+  transition: opacity 240ms var(--ease-studio);
+}
+.cursor[data-visible="true"] {
+  opacity: 1;
+}
+.cursor[data-state="stone"]::before {
+  opacity: 1;
+}
+.cursor[data-state="link"] {
+  inline-size: 36px;
+  block-size: 36px;
+  margin: -18px 0 0 -18px;
+  background: transparent;
+  box-shadow: inset 0 0 0 1.5px var(--color-amber);
+}
+.cursor[data-state="input"] {
+  inline-size: 2px;
+  block-size: 28px;
+  margin: -14px 0 0 -1px;
+  border-radius: var(--radius-cell);
+  box-shadow: none;
+}
+.cursor[data-state="hide"] {
+  opacity: 0;
+}
+.cursor[data-pressed="true"] {
+  scale: 0.8;
+}
+.cursor-label {
+  display: none;
+}
+
+/* ------------------------------------------------------------------------
+   MOTION SAFETY
+   ------------------------------------------------------------------------ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
